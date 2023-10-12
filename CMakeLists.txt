@@ -1,16 +1,21 @@
 cmake_minimum_required(VERSION 3.5)
 project(NuRaft VERSION 1.0.0 LANGUAGES CXX)
 
+option(NURAFT_EXAMPLES "Include examples" ON)
+option(NURAFT_TESTS "Include tests" ON)
+option(NURAFT_SHARED "Build shared library" ON)
+option(NURAFT_STATIC "Build static library" ON)
+
 # === Build type (default: RelWithDebInfo, O2) ===========
 if (NOT CMAKE_BUILD_TYPE)
     set(DEFAULT_BUILD_TYPE "RelWithDebInfo")
     #set(DEFAULT_BUILD_TYPE "Debug")
 
     set(BUILD_TYPE_OPTIONS
-        "Choose the type of build, "
-        "options are: Debug Release RelWithDebInfo MinSizeRel.")
+            "Choose the type of build, "
+            "options are: Debug Release RelWithDebInfo MinSizeRel.")
     set(CMAKE_BUILD_TYPE ${DEFAULT_BUILD_TYPE}
-        CACHE ${BUILD_TYPE_OPTIONS} FORCE)
+            CACHE ${BUILD_TYPE_OPTIONS} FORCE)
     message(STATUS "Build type is not given, use default.")
 endif ()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
@@ -22,7 +27,7 @@ if (CODE_COVERAGE GREATER 0)
     set(CMAKE_BUILD_TYPE "Debug")
     include(cmake/CodeCoverage.cmake)
     message(STATUS "---- CODE COVERAGE DETECTION MODE ----")
-endif()
+endif ()
 
 
 # === Find ASIO ===
@@ -40,12 +45,12 @@ if (BOOST_INCLUDE_PATH AND BOOST_LIBRARY_PATH)
 else ()
     # If not, ASIO standalone mode.
     FIND_PATH(ASIO_INCLUDE_DIR
-              NAME asio.hpp
-              HINTS ${PROJECT_SOURCE_DIR}/asio/asio/include
-                    $ENV{HOME}/local/include
-                    /opt/local/include
-                    /usr/local/include
-                    /usr/include)
+            NAME asio.hpp
+            HINTS ${PROJECT_SOURCE_DIR}/asio/asio/include
+            $ENV{HOME}/local/include
+            /opt/local/include
+            /usr/local/include
+            /usr/include)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DASIO_STANDALONE")
 
@@ -63,36 +68,35 @@ include_directories(BEFORE ./)
 include_directories(BEFORE ${ASIO_INCLUDE_DIR})
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/include)
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/include/libnuraft)
-include_directories(BEFORE ${PROJECT_SOURCE_DIR}/examples)
-include_directories(BEFORE ${PROJECT_SOURCE_DIR}/examples/calculator)
-include_directories(BEFORE ${PROJECT_SOURCE_DIR}/examples/echo)
+
+if (NURAFT_EXAMPLES)
+    include_directories(BEFORE ${PROJECT_SOURCE_DIR}/examples)
+    include_directories(BEFORE ${PROJECT_SOURCE_DIR}/examples/calculator)
+    include_directories(BEFORE ${PROJECT_SOURCE_DIR}/examples/echo)
+endif ()
+
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/src)
-include_directories(BEFORE ${PROJECT_SOURCE_DIR}/tests)
-include_directories(BEFORE ${PROJECT_SOURCE_DIR}/tests/unit)
+if (NURAFT_TESTS)
+    include_directories(BEFORE ${PROJECT_SOURCE_DIR}/tests)
+    include_directories(BEFORE ${PROJECT_SOURCE_DIR}/tests/unit)
+endif ()
 if (DEPS_PREFIX)
     message(STATUS "deps prefix: " ${DEPS_PREFIX})
     include_directories(AFTER ${DEPS_PREFIX}/include)
-else()
+else ()
     message(STATUS "deps prefix is not given")
-endif()
-
+endif ()
 
 # === Compiler flags ===
 if (NOT WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-pessimizing-move")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
     if (APPLE)
-#        include_directories(BEFORE
-#                /usr/local/opt/openssl/include
-#                )
-#        link_directories(
-#                /usr/local/opt/openssl/lib
-#                )
-    else()
+    else ()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
     endif ()
 
@@ -144,7 +148,7 @@ macro(NURAFT_USE_SYSTEM_OPENSSL)
         set(LIBCRYPTO OpenSSL::Crypto)
     else ()
         message(STATUS "OpenSSL not found")
-    endif()
+    endif ()
 endmacro()
 
 # === OpenSSL libraries ===
@@ -157,53 +161,53 @@ if (NOT DISABLE_SSL)
     endif ()
 
     include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
-endif()
+endif ()
 
 # === Compiler options ===
 if (ADDRESS_SANITIZER GREATER 0)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fuse-ld=gold")
     message(STATUS "---- ADDRESS SANITIZER IS ON ----")
-endif()
+endif ()
 
 if (THREAD_SANITIZER GREATER 0)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -fuse-ld=gold")
     add_definitions(-DSUPPRESS_TSAN_FALSE_ALARMS=1)
     message(STATUS "---- THREAD SANITIZER IS ON ----")
-endif()
+endif ()
 
 if (CODE_COVERAGE GREATER 0)
     APPEND_COVERAGE_COMPILER_FLAGS()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-inline")
     set(COVERAGE_EXCLUDES
-        '*asio/*'
-        '*examples/*'
-        '*tests/*'
-        '*usr/*'
+            '*asio/*'
+            '*examples/*'
+            '*tests/*'
+            '*usr/*'
     )
-endif()
+endif ()
 
-if ( (TESTSUITE_NO_COLOR GREATER 0) OR (WIN32) )
+if ((TESTSUITE_NO_COLOR GREATER 0) OR (WIN32))
     add_definitions(-DTESTSUITE_NO_COLOR=1)
     add_definitions(-DLOGGER_NO_COLOR=1)
     message(STATUS "---- NO ANSI COLOR ----")
-endif()
+endif ()
 
 if (ENABLE_RAFT_STATS GREATER 0)
     add_definitions(-DENABLE_RAFT_STATS=1)
     message(STATUS "---- ENABLED RAFT STATS ----")
-endif()
+endif ()
 
 # === Other shared libraries ===
 if (NOT WIN32)
     set(LIBDL dl)
     set(LIBZ z)
-endif()
+endif ()
 set(LIBRARIES
-    ${LIBSSL}
-    ${LIBCRYPTO}
-    ${LIBBOOST_SYSTEM}
-    ${LIBDL}
-    ${LIBZ})
+        ${LIBSSL}
+        ${LIBCRYPTO}
+        ${LIBBOOST_SYSTEM}
+        ${LIBDL}
+        ${LIBZ})
 
 
 # === Paths ===
@@ -212,88 +216,96 @@ set(EXAMPLES_SRC ${PROJECT_SOURCE_DIR}/examples)
 
 # === Copy script files ===
 file(COPY ${PROJECT_SOURCE_DIR}/scripts/test/runtests.sh
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+        DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # === Generate dummy self-signed cert and key for testing ===
 add_custom_target(build_ssl_key)
 if (NOT (DISABLE_SSL GREATER 0))
     add_custom_command(
-        TARGET build_ssl_key
-        PRE_BUILD
-        COMMAND
-        openssl req
-        -new
-        -newkey rsa:4096
-        -days 365
-        -nodes
-        -x509
-        -subj "/C=AB/ST=CD/L=EFG/O=ORG/CN=localhost"
-        -keyout ${CMAKE_CURRENT_BINARY_DIR}/key.pem
-        -out ${CMAKE_CURRENT_BINARY_DIR}/cert.pem
-        2> /dev/null
+            TARGET build_ssl_key
+            PRE_BUILD
+            COMMAND
+            openssl req
+            -new
+            -newkey rsa:4096
+            -days 365
+            -nodes
+            -x509
+            -subj "/C=AB/ST=CD/L=EFG/O=ORG/CN=localhost"
+            -keyout ${CMAKE_CURRENT_BINARY_DIR}/key.pem
+            -out ${CMAKE_CURRENT_BINARY_DIR}/cert.pem
+            2> /dev/null
     )
 endif ()
 
 # === Source files ===
 set(RAFT_CORE
-    ${ROOT_SRC}/asio_service.cxx
-    ${ROOT_SRC}/buffer.cxx
-    ${ROOT_SRC}/buffer_serializer.cxx
-    ${ROOT_SRC}/cluster_config.cxx
-    ${ROOT_SRC}/crc32.cxx
-    ${ROOT_SRC}/error_code.cxx
-    ${ROOT_SRC}/global_mgr.cxx
-    ${ROOT_SRC}/handle_append_entries.cxx
-    ${ROOT_SRC}/handle_client_request.cxx
-    ${ROOT_SRC}/handle_custom_notification.cxx
-    ${ROOT_SRC}/handle_commit.cxx
-    ${ROOT_SRC}/handle_join_leave.cxx
-    ${ROOT_SRC}/handle_priority.cxx
-    ${ROOT_SRC}/handle_snapshot_sync.cxx
-    ${ROOT_SRC}/handle_timeout.cxx
-    ${ROOT_SRC}/handle_user_cmd.cxx
-    ${ROOT_SRC}/handle_vote.cxx
-    ${ROOT_SRC}/launcher.cxx
-    ${ROOT_SRC}/log_entry.cxx
-    ${ROOT_SRC}/peer.cxx
-    ${ROOT_SRC}/raft_server.cxx
-    ${ROOT_SRC}/snapshot.cxx
-    ${ROOT_SRC}/snapshot_sync_ctx.cxx
-    ${ROOT_SRC}/snapshot_sync_req.cxx
-    ${ROOT_SRC}/srv_config.cxx
-    ${ROOT_SRC}/stat_mgr.cxx
-    )
+        ${ROOT_SRC}/asio_service.cxx
+        ${ROOT_SRC}/buffer.cxx
+        ${ROOT_SRC}/buffer_serializer.cxx
+        ${ROOT_SRC}/cluster_config.cxx
+        ${ROOT_SRC}/crc32.cxx
+        ${ROOT_SRC}/error_code.cxx
+        ${ROOT_SRC}/global_mgr.cxx
+        ${ROOT_SRC}/handle_append_entries.cxx
+        ${ROOT_SRC}/handle_client_request.cxx
+        ${ROOT_SRC}/handle_custom_notification.cxx
+        ${ROOT_SRC}/handle_commit.cxx
+        ${ROOT_SRC}/handle_join_leave.cxx
+        ${ROOT_SRC}/handle_priority.cxx
+        ${ROOT_SRC}/handle_snapshot_sync.cxx
+        ${ROOT_SRC}/handle_timeout.cxx
+        ${ROOT_SRC}/handle_user_cmd.cxx
+        ${ROOT_SRC}/handle_vote.cxx
+        ${ROOT_SRC}/launcher.cxx
+        ${ROOT_SRC}/log_entry.cxx
+        ${ROOT_SRC}/peer.cxx
+        ${ROOT_SRC}/raft_server.cxx
+        ${ROOT_SRC}/snapshot.cxx
+        ${ROOT_SRC}/snapshot_sync_ctx.cxx
+        ${ROOT_SRC}/snapshot_sync_req.cxx
+        ${ROOT_SRC}/srv_config.cxx
+        ${ROOT_SRC}/stat_mgr.cxx
+)
 add_library(RAFT_CORE_OBJ OBJECT ${RAFT_CORE})
 
 set(STATIC_LIB_SRC
-    $<TARGET_OBJECTS:RAFT_CORE_OBJ>)
+        $<TARGET_OBJECTS:RAFT_CORE_OBJ>)
 
 # === Executables ===
 set(LIBRARY_NAME "nuraft")
 
-add_library(static_lib ${STATIC_LIB_SRC})
-add_library(NuRaft::static_lib ALIAS static_lib)
-set_target_properties(static_lib PROPERTIES OUTPUT_NAME ${LIBRARY_NAME} CLEAN_DIRECT_OUTPUT 1)
+if (NURAFT_STATIC)
+    add_library(static_lib ${STATIC_LIB_SRC})
+    add_library(NuRaft::static_lib ALIAS static_lib)
+    set_target_properties(static_lib PROPERTIES OUTPUT_NAME ${LIBRARY_NAME} CLEAN_DIRECT_OUTPUT 1)
+endif ()
 
-add_library(shared_lib SHARED ${STATIC_LIB_SRC})
-add_library(NuRaft::shared_lib ALIAS shared_lib)
-set_target_properties(shared_lib PROPERTIES OUTPUT_NAME ${LIBRARY_NAME} CLEAN_DIRECT_OUTPUT 1)
+if (NURAFT_SHARED)
+    add_library(shared_lib SHARED ${STATIC_LIB_SRC})
+    add_library(NuRaft::shared_lib ALIAS shared_lib)
+    set_target_properties(shared_lib PROPERTIES OUTPUT_NAME ${LIBRARY_NAME} CLEAN_DIRECT_OUTPUT 1)
+endif ()
 
-# Include directories are necessary for dependents to use the targets.
-target_include_directories(static_lib
-    PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>
-)
+if (NURAFT_STATIC)
+    # Include directories are necessary for dependents to use the targets.
+    target_include_directories(static_lib
+            PUBLIC
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>
+    )
+endif ()
 
-target_include_directories(static_lib
-    PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>
-)
+if (NURAFT_SHARED)
+    target_include_directories(shared_lib
+            PUBLIC
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/include>
+    )
 
-if (APPLE)
-    target_link_libraries(shared_lib ${LIBRARIES})
+    if (APPLE)
+        target_link_libraries(shared_lib ${LIBRARIES})
+    endif ()
 endif ()
 
 if (WIN32)
@@ -303,55 +315,74 @@ else ()
 endif ()
 message(STATUS "Output library file name: ${LIBRARY_OUTPUT_NAME}")
 
-# === Examples ===
-add_subdirectory("${PROJECT_SOURCE_DIR}/examples")
+
+if (NURAFT_EXAMPLES)
+    # === Examples ===
+    add_subdirectory("${PROJECT_SOURCE_DIR}/examples")
+endif ()
 
 
-# === Tests ===
-add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
+if (NURAFT_TESTS)
+    # === Tests ===
+    add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
+endif ()
 
 
 if (CODE_COVERAGE GREATER 0)
     set(CODE_COVERAGE_DEPS
-        raft_server_test
-        failure_test
-        asio_service_test
-        buffer_test
-        serialization_test
-        timer_test
-        strfmt_test
-        stat_mgr_test
+            raft_server_test
+            failure_test
+            asio_service_test
+            buffer_test
+            serialization_test
+            timer_test
+            strfmt_test
+            stat_mgr_test
     )
 
     # lcov
     SETUP_TARGET_FOR_COVERAGE(
-        NAME raft_cov
-        EXECUTABLE ./runtests.sh
-        DEPENDENCIES ${CODE_COVERAGE_DEPS}
+            NAME raft_cov
+            EXECUTABLE ./runtests.sh
+            DEPENDENCIES ${CODE_COVERAGE_DEPS}
     )
-endif()
+endif ()
 
+if (NURAFT_SHARED AND NURAFT_STATIC)
+    # === Install Targets ===
+    install(TARGETS shared_lib static_lib
+            EXPORT nuraft-targets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+    )
+elseif (NURAFT_SHARED)
+    install(TARGETS shared_lib
+            EXPORT nuraft-targets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+    )
+elseif (NURAFT_STATIC)
+    install(TARGETS static_lib
+            EXPORT nuraft-targets
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib
+    )
+endif ()
 
-# === Install Targets ===
-install(TARGETS shared_lib static_lib
-    EXPORT nuraft-targets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/libnuraft DESTINATION include)
 
 install(EXPORT nuraft-targets
-    FILE NuRaftTargets.cmake
-    NAMESPACE NuRaft::
-    DESTINATION lib/cmake/NuRaft
+        FILE NuRaftTargets.cmake
+        NAMESPACE NuRaft::
+        DESTINATION lib/cmake/NuRaft
 )
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/NuRaftConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/NuRaftConfig.cmake"
-    INSTALL_DESTINATION lib/cmake/NuRaft
+        "${CMAKE_CURRENT_BINARY_DIR}/NuRaftConfig.cmake"
+        INSTALL_DESTINATION lib/cmake/NuRaft
 )
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/NuRaftConfig.cmake"
-    DESTINATION lib/cmake/NuRaft
+        DESTINATION lib/cmake/NuRaft
 )
